@@ -1,5 +1,5 @@
 #!::usr::bin::env perl
-package App::Termast::Server::Telnet;
+package App::Termcast::Server::Telnet;
 use Moose;
 use AnyEvent::Socket;
 use AnyEvent::Handle;
@@ -18,59 +18,76 @@ App::Termast::Server::Telnet - telnet interface for the termcast server
 
 =cut
 
-has handle => (
+has telnet_port => (
     is  => 'ro',
+    isa => 'Int',
+);
+
+has handle => (
+    is  => 'rw',
     isa => 'AnyEvent::Handle',
 );
 
-has server_guard => (
-    is  => 'rw',
-    lazy_build => 1,
+has tc_server_guard => (
+    is  => 'ro',
+    builder => '_build_server_guard',
 );
 
-sub _build_server_guard {
+sub _build_tc_server_guard {
     my $self = shift;
 
-tcp_connect 'localhost', 9092, sub {
-    my ($fh) = @_
-        or die "localhost connect failed: $!";
+    tcp_connect 'localhost', 9092, sub {
+        my ($fh) = @_
+            or die "localhost connect failed: $!";
 
-    $h = AnyEvent::Handle->new(
-        fh => $fh,
-        on_read => sub {
-            my ($h, $host, $port) = @_;
-            $h->push_read(
-                json => sub {
-                    my ($h, $data) = @_;
-                    $data->{response} ||= 'null';
-                    if ($data->{response} eq 'sessions') {
-                        my %sessions = %{ $data->{sessions} };
-                        if (keys %sessions) {
-                            warn "something";
+        my $h = AnyEvent::Handle->new(
+            fh => $fh,
+            on_read => sub {
+                my ($h, $host, $port) = @_;
+                $h->push_read(
+                    json => sub {
+                        my ($h, $data) = @_;
+                        $data->{response} ||= 'null';
+                        if ($data->{response} eq 'sessions') {
+                            my %sessions = %{ $data->{sessions} };
+                            if (keys %sessions) {
+                                ...
+                            }
+                        }
+                        elsif ($data->{response} eq 'stream') {
+                            ...
                         }
                     }
-                    elsif ($data->{response} eq 'stream') {
-                        warn $data->{stream};
-                    }
-                }
-            );
-        },
-        on_error => sub {
-            my ($h, $fatal, $error) = @_;
-            warn $error;
-            die if $fatal;
-        },
-    );
+                );
+            },
+            on_error => sub {
+                my ($h, $fatal, $error) = @_;
+                warn $error;
+                die if $fatal;
+            },
+        );
 
-    $h->push_write(
-        json => +{
-            request => 'sessions',
-        }
-    );
+        $h->push_write(
+            json => +{
+                request => 'sessions',
+            }
+        );
 
-    $self->handle($h);
-};
+        $self->handle($h);
+    };
 
+}
+
+has telnet_server_guard => (
+    is  => 'ro',
+    builder => '_build_telnet_server_guard',
+);
+
+sub _build_telnet_server_guard {
+    my $self = shift;
+
+    tcp_server undef, $self->telnet_port, sub {
+    };
 }
 
 sub run { AE::cv->recv }
