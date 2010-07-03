@@ -1,5 +1,5 @@
 #!::usr::bin::env perl
-package App::Termcast::Server::Telnet::HandleData;
+package App::Termcast::Server::Telnet::SessionData;
 use Moose::Role;
 
 =head1 NAME

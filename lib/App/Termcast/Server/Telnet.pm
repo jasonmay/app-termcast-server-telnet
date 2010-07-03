@@ -3,7 +3,10 @@ package App::Termcast::Server::Telnet;
 use Moose;
 use AnyEvent::Socket;
 use AnyEvent::Handle;
+use App::Termcast::Handle;
+use App::Termcast::Session;
 use AE;
+use Data::UUID::LibUUID;
 use namespace::autoclean;
 
 =head1 NAME
@@ -21,19 +24,20 @@ App::Termast::Server::Telnet - telnet interface for the termcast server
 has telnet_port => (
     is  => 'ro',
     isa => 'Int',
+    default => 23,
 );
 
-has handle => (
+has client_handle => (
     is  => 'rw',
     isa => 'AnyEvent::Handle',
 );
 
-has tc_server_guard => (
-    is  => 'ro',
-    builder => '_build_server_guard',
+has client_guard => (
+    is      => 'ro',
+    builder => '_build_client_guard',
 );
 
-sub _build_tc_server_guard {
+sub _build_client_guard {
     my $self = shift;
 
     tcp_connect 'localhost', 9092, sub {
@@ -63,7 +67,7 @@ sub _build_tc_server_guard {
             on_error => sub {
                 my ($h, $fatal, $error) = @_;
                 warn $error;
-                die if $fatal;
+                exit 1 if $fatal;
             },
         );
 
@@ -73,7 +77,7 @@ sub _build_tc_server_guard {
             }
         );
 
-        $self->handle($h);
+        $self->client_handle($h);
     };
 
 }
@@ -83,11 +87,90 @@ has telnet_server_guard => (
     builder => '_build_telnet_server_guard',
 );
 
+has stream_keymap => (
+    is      => 'rw',
+    isa     => 'HashRef',
+    traits  => ['Hash'],
+    default => sub { +{} },
+    handles => {
+        set_keymap    => 'set',
+        get_keymap    => 'get',
+        delete_keymap => 'delete',
+    },
+);
+
 sub _build_telnet_server_guard {
     my $self = shift;
 
     tcp_server undef, $self->telnet_port, sub {
+        my ($fh, $host, $port) = @_;
+        my $h = App::Termcast::Handle->new(
+            fh => $fh,
+            on_read => sub {
+                my $h = shift;
+                $h->push_read(
+                    chunk => 1, sub {
+                        my ($h, $buf) = @_;
+                        my $clear = "\e[2J\e[H";
+                        if (ord $buf eq "255") {
+                            $h->push_read(
+                                chunk => 2,
+                                sub { $self->handle_telnet_codes(@_) },
+                            );
+                        }
+                        else {
+                            $h->push_write("${clear}OH HAI! YOU TYPED $buf!");
+                        }
+                    }
+                );
+            },
+            on_error => sub {
+                my ($h, $fatal, $error) = @_;
+
+                if ($fatal) {
+                    $self->delete_telnet_session($h->handle_id);
+                }
+                else {
+                    warn $error;
+                }
+            },
+            handle_id => new_uuid_string()
+        );
+
+        $h->push_write(
+            join(
+                '',
+                map { chr }
+                (
+                    255, 251,  1, # iac will echo
+                    255, 254,  34, # iac wont linemode
+                )
+            )
+        );
+        my $session = App::Termcast::Session->with_traits(
+            'App::Termcast::Server::Telnet::SessionData'
+        )->new();
+        $h->session($session);
+
+        $self->set_handle($h->handle_id => $h);
     };
+}
+
+has handles => (
+    is     => 'ro',
+    isa    => 'HashRef',
+    traits => ['Hash'],
+    default => sub { +{} },
+    handles => {
+        set_handle    => 'set',
+        delete_handle => 'delete',
+        handle_ids    => 'keys',
+    },
+);
+
+sub handle_telnet_codes {
+    my $self = shift;
+    # I don't know enough about telnet to do stuff properly here
 }
 
 sub run { AE::cv->recv }
