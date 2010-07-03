@@ -6,8 +6,11 @@ use AnyEvent::Handle;
 use App::Termcast::Handle;
 use App::Termcast::Session;
 use AE;
+use YAML;
 use Data::UUID::LibUUID;
 use namespace::autoclean;
+
+use constant CLEAR => "\e[2J\e[H";
 
 =head1 NAME
 
@@ -51,15 +54,11 @@ sub _build_client_guard {
                 $h->push_read(
                     json => sub {
                         my ($h, $data) = @_;
-                        $data->{response} ||= 'null';
-                        if ($data->{response} eq 'sessions') {
-                            my %sessions = %{ $data->{sessions} };
-                            if (keys %sessions) {
-                                ...
-                            }
+                        if ($data->{notice}) {
+                            $self->handle_server_notice($data);
                         }
-                        elsif ($data->{response} eq 'stream') {
-                            ...
+                        elsif ($data->{response}) {
+                            $self->handle_server_response($data);
                         }
                     }
                 );
@@ -87,15 +86,16 @@ has telnet_server_guard => (
     builder => '_build_telnet_server_guard',
 );
 
-has stream_keymap => (
+has stream_data => (
     is      => 'rw',
-    isa     => 'HashRef',
+    isa     => 'ArrayRef',
     traits  => ['Hash'],
     default => sub { +{} },
     handles => {
-        set_keymap    => 'set',
-        get_keymap    => 'get',
-        delete_keymap => 'delete',
+        set_stream         => 'set',
+        get_stream         => 'get',
+        delete_stream      => 'delete',
+        clear_stream_data  => 'clear',
     },
 );
 
@@ -111,7 +111,6 @@ sub _build_telnet_server_guard {
                 $h->push_read(
                     chunk => 1, sub {
                         my ($h, $buf) = @_;
-                        my $clear = "\e[2J\e[H";
                         if (ord $buf eq "255") {
                             $h->push_read(
                                 chunk => 2,
@@ -119,7 +118,9 @@ sub _build_telnet_server_guard {
                             );
                         }
                         else {
-                            $h->push_write("${clear}OH HAI! YOU TYPED $buf!");
+                            my $output = Dump($self->stream_keymap);
+                            $output =~ s/\n/\r\n/g;
+                            $h->push_write(CLEAR . $output);
                         }
                     }
                 );
@@ -140,11 +141,14 @@ sub _build_telnet_server_guard {
         $h->push_write(
             join(
                 '',
-                map { chr }
                 (
-                    255, 251,  1, # iac will echo
-                    255, 254,  34, # iac wont linemode
-                )
+                    map { chr }
+                    (
+                        255, 251,  1, # iac will echo
+                        255, 251,  3, # iac will suppres go_ahead
+                        255, 254, 34, # iac wont linemode
+                    )
+                ), CLEAR
             )
         );
         my $session = App::Termcast::Session->with_traits(
@@ -157,9 +161,9 @@ sub _build_telnet_server_guard {
 }
 
 has handles => (
-    is     => 'ro',
-    isa    => 'HashRef',
-    traits => ['Hash'],
+    is      => 'ro',
+    isa     => 'HashRef',
+    traits  => ['Hash'],
     default => sub { +{} },
     handles => {
         set_handle    => 'set',
@@ -169,8 +173,42 @@ has handles => (
 );
 
 sub handle_telnet_codes {
-    my $self = shift;
+    my $self             = shift;
+    my $handle           = shift;
+    my ($verb, $feature) = split '', shift;
     # I don't know enough about telnet to do stuff properly here
+}
+
+sub handle_server_notice {
+    my $self = shift;
+    my $data = shift;
+
+    if ($data->{notice} eq 'connect') {
+        $self->set_stream(
+            $data->{connection}{session_id} => {
+                $data->{connection}
+            },
+        );
+    }
+    elsif ($data->{notice} eq 'disconnect') {
+        $self->delete_stream($data->{session_id});
+    }
+}
+
+sub handle_server_response {
+    my $self = shift;
+    my $data = shift;
+
+    if ($data->{response} eq 'sessions') {
+        my @sessions = @{ $data->{sessions} };
+        if (@sessions) {
+            $self->clear_stream_data;
+            for (@sessions) {
+                $self->set_stream(%$_);
+            }
+        }
+    }
+    elsif ($data->{response} eq 'stream') { ... }
 }
 
 sub run { AE::cv->recv }
