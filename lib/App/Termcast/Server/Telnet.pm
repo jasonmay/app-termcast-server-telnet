@@ -132,7 +132,7 @@ sub telnet_accept {
             $h->push_read(
                 chunk => 1, sub {
                     my ($h, $buf) = @_;
-                    if (ord $buf eq "255") {
+                    if (ord $buf == 255) {
                         $h->push_read(
                             chunk => 2,
                             sub { $self->handle_telnet_codes(@_) },
