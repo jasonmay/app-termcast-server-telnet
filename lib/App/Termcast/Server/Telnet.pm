@@ -1,4 +1,4 @@
-#!::usr::bin::env perl
+#!perl
 package App::Termcast::Server::Telnet;
 use Moose;
 use AnyEvent::Socket;
@@ -139,7 +139,7 @@ sub telnet_accept {
                         );
                     }
                     else {
-                        $self->send_connection_list($h);
+                        $self->dispatch_telnet_input($h, $buf);
                     }
                 }
             );
@@ -148,7 +148,7 @@ sub telnet_accept {
             my ($h, $fatal, $error) = @_;
 
             if ($fatal) {
-                $self->delete_telnet_session($h->handle_id);
+                $self->delete_handle($h->handle_id);
             }
             else {
                 warn $error;
@@ -178,6 +178,49 @@ sub telnet_accept {
 
     $self->set_handle($h->handle_id => $h);
     $self->send_connection_list($h);
+}
+
+sub dispatch_telnet_input {
+    my $self = shift;
+    my ($handle, $buf) = @_;
+
+    if ($handle->session->viewing) {
+        $self->dispatch_stream_inputs(@_);
+    }
+    else {
+        $self->dispatch_menu_inputs(@_);
+    }
+}
+
+sub dispatch_stream_inputs {
+    my $self = shift;
+    my ($handle, $buf) = @_;
+
+    if ($buf eq 'q' or $buf eq "\e") {
+        $handle->session->_clear_viewing;
+        $self->send_connection_list($handle);
+    }
+}
+
+sub dispatch_menu_inputs {
+    my $self = shift;
+    my ($handle, $buf) = @_;
+
+    my $session = $self->get_session_from_key($buf);
+
+    if ($buf =~ "\e") { # pressed esc
+        $handle->destroy;
+        $self->delete_handle($handle->handle_id);
+        return;
+    }
+
+    if ($session) {
+        $handle->session->viewing($session);
+        $handle->push_write(CLEAR . "  [ pretend there is termcast stuff going on here ]\r\n");
+    }
+    else {
+        $self->send_connection_list($handle);
+    }
 }
 
 sub handle_telnet_codes {
@@ -233,6 +276,18 @@ sub send_connection_list {
     $output = "No active termcast sessions!\r\n" if !$output;
 
     $handle->push_write(CLEAR . "Users connected:\r\n\r\n$output");
+}
+
+sub get_session_from_key {
+    my $self = shift;
+    my $key = shift;
+    my %id_map;
+
+    my @stream_ids = $self->stream_ids;
+    my @keys       = ('a' .. 'z', 'A' .. 'Z');
+    @id_map{ map { $keys[$_] } 0 .. @stream_ids } = sort @stream_ids;
+
+    return $id_map{$key};
 }
 
 sub run { AE::cv->recv }

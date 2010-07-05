@@ -1,4 +1,4 @@
-#!::usr::bin::env perl
+#!/usr/bin/env perl
 package App::Termcast::Server::Telnet::SessionData;
 use Moose::Role;
 
@@ -14,7 +14,17 @@ App::Termcast::Server::Telnet::Session -
 
 =cut
 
+has viewing => (
+    is  => 'rw',
+    isa => 'Maybe[Str]',
+    clearer => '_clear_viewing',
+);
 
+has page => (
+    is      => 'rw',
+    isa     => 'Int',
+    default => 0,
+);
 
 no Moose::Role;
 
