@@ -86,20 +86,6 @@ has telnet_server_guard => (
     builder => '_build_telnet_server_guard',
 );
 
-has stream_data => (
-    is      => 'rw',
-    isa     => 'HashRef',
-    traits  => ['Hash'],
-    default => sub { +{} },
-    handles => {
-        set_stream         => 'set',
-        stream_ids         => 'keys',
-        get_stream         => 'get',
-        delete_stream      => 'delete',
-        clear_stream_data  => 'clear',
-    },
-);
-
 sub _build_telnet_server_guard {
     my $self = shift;
 
@@ -160,6 +146,20 @@ sub _build_telnet_server_guard {
         $self->send_connection_list($h);
     };
 }
+
+has stream_data => (
+    is      => 'rw',
+    isa     => 'HashRef',
+    traits  => ['Hash'],
+    default => sub { +{} },
+    handles => {
+        set_stream         => 'set',
+        stream_ids         => 'keys',
+        get_stream         => 'get',
+        delete_stream      => 'delete',
+        clear_stream_data  => 'clear',
+    },
+);
 
 has handles => (
     is      => 'ro',
