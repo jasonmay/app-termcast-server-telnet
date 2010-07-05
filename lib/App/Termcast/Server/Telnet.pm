@@ -43,41 +43,7 @@ has client_guard => (
 sub _build_client_guard {
     my $self = shift;
 
-    tcp_connect 'localhost', 9092, sub {
-        my ($fh) = @_
-            or die "localhost connect failed: $!";
-
-        my $h = AnyEvent::Handle->new(
-            fh => $fh,
-            on_read => sub {
-                my ($h, $host, $port) = @_;
-                $h->push_read(
-                    json => sub {
-                        my ($h, $data) = @_;
-                        if ($data->{notice}) {
-                            $self->handle_server_notice($data);
-                        }
-                        elsif ($data->{response}) {
-                            $self->handle_server_response($data);
-                        }
-                    }
-                );
-            },
-            on_error => sub {
-                my ($h, $fatal, $error) = @_;
-                warn $error;
-                exit 1 if $fatal;
-            },
-        );
-
-        $h->push_write(
-            json => +{
-                request => 'sessions',
-            }
-        );
-
-        $self->client_handle($h);
-    };
+    tcp_connect 'localhost', 9092, sub { $self->client_connect(@_) };
 
 }
 
@@ -89,62 +55,7 @@ has telnet_server_guard => (
 sub _build_telnet_server_guard {
     my $self = shift;
 
-    tcp_server undef, $self->telnet_port, sub {
-        my ($fh, $host, $port) = @_;
-        my $h = App::Termcast::Handle->new(
-            fh => $fh,
-            on_read => sub {
-                my $h = shift;
-                $h->push_read(
-                    chunk => 1, sub {
-                        my ($h, $buf) = @_;
-                        if (ord $buf eq "255") {
-                            $h->push_read(
-                                chunk => 2,
-                                sub { $self->handle_telnet_codes(@_) },
-                            );
-                        }
-                        else {
-                            $self->send_connection_list($h);
-                        }
-                    }
-                );
-            },
-            on_error => sub {
-                my ($h, $fatal, $error) = @_;
-
-                if ($fatal) {
-                    $self->delete_telnet_session($h->handle_id);
-                }
-                else {
-                    warn $error;
-                }
-            },
-            handle_id => new_uuid_string()
-        );
-
-        $h->push_write(
-            join(
-                '',
-                (
-                    map { chr }
-                    (
-                        255, 251,  1, # iac will echo
-                        255, 251,  3, # iac will suppres go_ahead
-                        255, 254, 34, # iac wont linemode
-                    )
-                )
-            )
-        );
-
-        my $session = App::Termcast::Session->with_traits(
-            'App::Termcast::Server::Telnet::SessionData'
-        )->new();
-        $h->session($session);
-
-        $self->set_handle($h->handle_id => $h);
-        $self->send_connection_list($h);
-    };
+    tcp_server undef, $self->telnet_port, sub { $self->telnet_accept(@_) };
 }
 
 has stream_data => (
@@ -173,6 +84,101 @@ has handles => (
         handle_list   => 'values',
     },
 );
+
+sub client_connect {
+    my $self = shift;
+    my ($fh) = @_
+        or die "localhost connect failed: $!";
+
+    my $h = AnyEvent::Handle->new(
+        fh => $fh,
+        on_read => sub {
+            my ($h, $host, $port) = @_;
+            $h->push_read(
+                json => sub {
+                    my ($h, $data) = @_;
+                    if ($data->{notice}) {
+                        $self->handle_server_notice($data);
+                    }
+                    elsif ($data->{response}) {
+                        $self->handle_server_response($data);
+                    }
+                }
+            );
+        },
+        on_error => sub {
+            my ($h, $fatal, $error) = @_;
+            warn $error;
+            exit 1 if $fatal;
+        },
+    );
+
+    $h->push_write(
+        json => +{
+            request => 'sessions',
+        }
+    );
+
+    $self->client_handle($h);
+}
+
+sub telnet_accept {
+    my $self = shift;
+    my ($fh, $host, $port) = @_;
+    my $h = App::Termcast::Handle->new(
+        fh => $fh,
+        on_read => sub {
+            my $h = shift;
+            $h->push_read(
+                chunk => 1, sub {
+                    my ($h, $buf) = @_;
+                    if (ord $buf eq "255") {
+                        $h->push_read(
+                            chunk => 2,
+                            sub { $self->handle_telnet_codes(@_) },
+                        );
+                    }
+                    else {
+                        $self->send_connection_list($h);
+                    }
+                }
+            );
+        },
+        on_error => sub {
+            my ($h, $fatal, $error) = @_;
+
+            if ($fatal) {
+                $self->delete_telnet_session($h->handle_id);
+            }
+            else {
+                warn $error;
+            }
+        },
+        handle_id => new_uuid_string()
+    );
+
+    $h->push_write(
+        join(
+            '',
+            (
+                map { chr }
+                (
+                    255, 251,  1, # iac will echo
+                    255, 251,  3, # iac will suppres go_ahead
+                    255, 254, 34, # iac wont linemode
+                )
+            )
+        )
+    );
+
+    my $session = App::Termcast::Session->with_traits(
+        'App::Termcast::Server::Telnet::SessionData'
+    )->new();
+    $h->session($session);
+
+    $self->set_handle($h->handle_id => $h);
+    $self->send_connection_list($h);
+}
 
 sub handle_telnet_codes {
     my $self             = shift;
