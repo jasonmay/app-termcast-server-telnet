@@ -88,11 +88,12 @@ has telnet_server_guard => (
 
 has stream_data => (
     is      => 'rw',
-    isa     => 'ArrayRef',
+    isa     => 'HashRef',
     traits  => ['Hash'],
     default => sub { +{} },
     handles => {
         set_stream         => 'set',
+        stream_ids         => 'keys',
         get_stream         => 'get',
         delete_stream      => 'delete',
         clear_stream_data  => 'clear',
@@ -118,9 +119,7 @@ sub _build_telnet_server_guard {
                             );
                         }
                         else {
-                            my $output = Dump($self->stream_keymap);
-                            $output =~ s/\n/\r\n/g;
-                            $h->push_write(CLEAR . $output);
+                            $self->send_connection_list($h);
                         }
                     }
                 );
@@ -148,15 +147,17 @@ sub _build_telnet_server_guard {
                         255, 251,  3, # iac will suppres go_ahead
                         255, 254, 34, # iac wont linemode
                     )
-                ), CLEAR
+                )
             )
         );
+
         my $session = App::Termcast::Session->with_traits(
             'App::Termcast::Server::Telnet::SessionData'
         )->new();
         $h->session($session);
 
         $self->set_handle($h->handle_id => $h);
+        $self->send_connection_list($h);
     };
 }
 
@@ -169,6 +170,7 @@ has handles => (
         set_handle    => 'set',
         delete_handle => 'delete',
         handle_ids    => 'keys',
+        handle_list   => 'values',
     },
 );
 
@@ -185,14 +187,13 @@ sub handle_server_notice {
 
     if ($data->{notice} eq 'connect') {
         $self->set_stream(
-            $data->{connection}{session_id} => {
-                $data->{connection}
-            },
+            $data->{connection}{session_id} => $data->{connection},
         );
     }
     elsif ($data->{notice} eq 'disconnect') {
         $self->delete_stream($data->{session_id});
     }
+    $self->send_connection_list($_) for $self->handle_list;
 }
 
 sub handle_server_response {
@@ -204,11 +205,28 @@ sub handle_server_response {
         if (@sessions) {
             $self->clear_stream_data;
             for (@sessions) {
-                $self->set_stream(%$_);
+                $self->set_stream($_->{session_id} => $_);
             }
         }
     }
     elsif ($data->{response} eq 'stream') { ... }
+}
+
+sub send_connection_list {
+    my $self   = shift;
+    my $handle = shift;
+    my $output;
+
+    my $letter = 'a';
+    my @stream_data = $self->get_stream(sort $self->stream_ids);
+    foreach my $stream (@stream_data) {
+        $output .= sprintf "%s) %s\r\n", $letter, $stream->{user};
+        $letter++;
+    }
+
+    $output = "No active termcast sessions!\r\n" if !$output;
+
+    $handle->push_write(CLEAR . "Users connected:\r\n\r\n$output");
 }
 
 sub run { AE::cv->recv }
