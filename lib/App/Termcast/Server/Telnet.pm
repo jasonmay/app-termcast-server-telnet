@@ -194,17 +194,44 @@ sub dispatch_menu_inputs {
     my $self = shift;
     my ($handle, $buf) = @_;
 
-    my $session = $self->get_session_from_key($buf);
-
     if ($buf =~ "\e") { # pressed esc
         $handle->destroy;
         $self->delete_handle($handle->handle_id);
         return;
     }
 
+    my $session = $self->get_session_from_key($buf);
+
     if ($session) {
         $handle->session->viewing($session);
-        $handle->push_write(CLEAR . "  [ pretend there is termcast stuff going on here ]\r\n");
+
+        tcp_connect 'unix/', "../app-termcast-server/$session", sub { # FIXME
+            my $fh = shift;
+            my $h = AnyEvent::Handle->new(
+                fh => $fh,
+                on_read => sub {
+                    my $h = shift;
+                    $h->push_read(
+                        chunk => 1,
+                        sub {
+                            my ($h, $char) = @_;
+                            $handle->push_write($char);
+                        },
+                    );
+                },
+                on_error => sub {
+                    my ($h, $fatal, $error) = @_;
+
+                    if ($fatal) {
+                        $handle->session->_clear_viewing;
+                        $self->send_connection_list($handle);
+                    }
+                    else {
+                        warn $error;
+                    }
+                }
+            );
+        } or die $!;
     }
     else {
         $self->send_connection_list($handle);
