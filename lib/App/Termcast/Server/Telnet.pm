@@ -285,7 +285,6 @@ sub handle_server_response {
             }
         }
     }
-    elsif ($data->{response} eq 'stream') { ... }
 }
 
 sub send_connection_list {
