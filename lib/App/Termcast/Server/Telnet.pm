@@ -184,8 +184,10 @@ sub dispatch_stream_inputs {
     my $self = shift;
     my ($handle, $buf) = @_;
 
+    warn $handle->session->stream_handle;
     if ($buf eq 'q' or $buf eq "\e") {
         $handle->session->_clear_viewing;
+        $handle->session->_clear_stream_handle;
         $self->send_connection_list($handle);
     }
 }
@@ -204,9 +206,14 @@ sub dispatch_menu_inputs {
 
     if ($session) {
         $handle->session->viewing($session);
+        $handle->push_write(CLEAR);
 
-        tcp_connect 'unix/', "../app-termcast-server/$session", sub { # FIXME
-            my $fh = shift;
+        require Cwd;
+        my $path = "../app-termcast-server/$session";
+        my $abs_path = Cwd::abs_path($path);
+        tcp_connect 'unix/', $abs_path, sub { # FIXME
+            warn "unix connect";
+            my $fh = shift or die "../app-termcast-server/$session: $!";
             my $h = AnyEvent::Handle->new(
                 fh => $fh,
                 on_read => sub {
@@ -215,6 +222,7 @@ sub dispatch_menu_inputs {
                         chunk => 1,
                         sub {
                             my ($h, $char) = @_;
+                            warn $char;
                             $handle->push_write($char);
                         },
                     );
@@ -224,6 +232,7 @@ sub dispatch_menu_inputs {
 
                     if ($fatal) {
                         $handle->session->_clear_viewing;
+                        $handle->session->_clear_stream_handle;
                         $self->send_connection_list($handle);
                     }
                     else {
@@ -231,7 +240,10 @@ sub dispatch_menu_inputs {
                     }
                 }
             );
-        } or die $!;
+            warn "$h ???";
+            $handle->session->stream_handle($h);
+        };
+        warn "test";
     }
     else {
         $self->send_connection_list($handle);

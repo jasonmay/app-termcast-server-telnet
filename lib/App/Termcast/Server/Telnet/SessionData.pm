@@ -26,6 +26,12 @@ has page => (
     default => 0,
 );
 
+has stream_handle => (
+    is  => 'rw',
+    isa => 'AnyEvent::Handle',
+    clearer => '_clear_stream_handle',
+);
+
 no Moose::Role;
 
 1;
