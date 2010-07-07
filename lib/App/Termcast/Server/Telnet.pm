@@ -35,29 +35,6 @@ has client_handle => (
     isa => 'AnyEvent::Handle',
 );
 
-has client_guard => (
-    is      => 'ro',
-    builder => '_build_client_guard',
-);
-
-sub _build_client_guard {
-    my $self = shift;
-
-    tcp_connect 'localhost', 9092, sub { $self->client_connect(@_) };
-
-}
-
-has telnet_server_guard => (
-    is  => 'ro',
-    builder => '_build_telnet_server_guard',
-);
-
-sub _build_telnet_server_guard {
-    my $self = shift;
-
-    tcp_server undef, $self->telnet_port, sub { $self->telnet_accept(@_) };
-}
-
 has stream_data => (
     is      => 'rw',
     isa     => 'HashRef',
@@ -84,6 +61,17 @@ has handles => (
         handle_list   => 'values',
     },
 );
+
+sub BUILD {
+    my $self = shift;
+
+    my $host        = 'localhsot';
+    my $server_port = 9092;
+    my $telnet_port = $self->telnet_port;
+
+    tcp_connect $host, $server_port, sub { $self->client_connect(@_) };
+    tcp_server  undef, $telnet_port, sub { $self->telnet_accept(@_) };
+}
 
 sub client_connect {
     my $self = shift;
