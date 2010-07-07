@@ -65,7 +65,7 @@ has handles => (
 sub BUILD {
     my $self = shift;
 
-    my $host        = 'localhsot';
+    my $host        = 'localhost';
     my $server_port = 9092;
     my $telnet_port = $self->telnet_port;
 
