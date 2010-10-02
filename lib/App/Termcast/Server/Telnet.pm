@@ -5,6 +5,7 @@ use AnyEvent::Socket;
 use AnyEvent::Handle;
 use App::Termcast::Handle;
 use App::Termcast::Session;
+use Time::Duration;
 use AE;
 use YAML;
 use Data::UUID::LibUUID;
@@ -288,7 +289,10 @@ sub send_connection_list {
     my $letter = 'a';
     my @stream_data = $self->get_stream(sort $self->stream_ids);
     foreach my $stream (@stream_data) {
-        $output .= sprintf "%s) %s\r\n", $letter, $stream->{user};
+        $output .= sprintf "%s) %s - Active %s\r\n",
+                   $letter,
+                   $stream->{user},
+                   ago(time() - $stream->{last_active});
         $letter++;
     }
 
