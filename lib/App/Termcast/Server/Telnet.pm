@@ -9,6 +9,7 @@ use Time::Duration;
 use AE;
 use YAML;
 use Data::UUID::LibUUID;
+use Scalar::Util qw(weaken);
 use namespace::autoclean;
 
 use constant CLEAR => "\e[2J\e[H";
@@ -209,6 +210,7 @@ sub dispatch_menu_inputs {
         $handle->session->viewing($session);
         $handle->push_write(CLEAR);
 
+        weaken(my $weakself = $self);
         my $file = $self->get_stream($session)->{socket};
         tcp_connect 'unix/', $file, sub {
             my $fh = shift or die "$file: $!";
@@ -225,7 +227,7 @@ sub dispatch_menu_inputs {
                     if ($fatal) {
                         $handle->session->_clear_viewing;
                         $handle->session->_clear_stream_handle;
-                        $self->send_connection_list($handle);
+                        $weakself->send_connection_list($handle);
                     }
                     else {
                         warn $error;
