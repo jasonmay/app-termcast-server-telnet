@@ -196,7 +196,8 @@ sub dispatch_menu_inputs {
     my $self = shift;
     my ($handle, $buf) = @_;
 
-    if ($buf =~ "\e") { # pressed esc
+    if ($buf eq 'q') {
+        $handle->push_write(CLEAR);
         $handle->destroy;
         $self->delete_handle($handle->handle_id);
         return;
