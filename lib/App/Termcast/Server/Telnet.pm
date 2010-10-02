@@ -216,13 +216,8 @@ sub dispatch_menu_inputs {
                 fh => $fh,
                 on_read => sub {
                     my $h = shift;
-                    $h->push_read(
-                        chunk => 1,
-                        sub {
-                            my ($h, $char) = @_;
-                            $handle->push_write($char);
-                        },
-                    );
+                    $handle->push_write($h->rbuf);
+                    $h->{rbuf} = '';
                 },
                 on_error => sub {
                     my ($h, $fatal, $error) = @_;
