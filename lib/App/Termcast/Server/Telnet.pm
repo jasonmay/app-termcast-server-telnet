@@ -1,16 +1,17 @@
 #!perl
 package App::Termcast::Server::Telnet;
 use Moose;
-use AnyEvent::Socket;
-use AnyEvent::Handle;
-use App::Termcast::Handle;
-use App::Termcast::Session;
+
+
 use Time::Duration;
-use AE;
-use YAML;
 use Data::UUID::LibUUID;
 use Scalar::Util qw(weaken);
-use namespace::autoclean;
+
+use Reflex::Collection;
+
+extends 'Reflex::Base';
+
+with 'Reflex::Role::Accepting', 'Reflex::Role::Streaming';
 
 use constant CLEAR => "\e[2J\e[H";
 
@@ -32,48 +33,9 @@ has telnet_port => (
     default => 23,
 );
 
-has client_handle => (
-    is  => 'rw',
-    isa => 'AnyEvent::Handle',
+has_many streams => (
+    handles => { remember_stream => 'rememer' },
 );
-
-has stream_data => (
-    is      => 'rw',
-    isa     => 'HashRef',
-    traits  => ['Hash'],
-    default => sub { +{} },
-    handles => {
-        set_stream         => 'set',
-        stream_ids         => 'keys',
-        get_stream         => 'get',
-        delete_stream      => 'delete',
-        clear_stream_data  => 'clear',
-    },
-);
-
-has handles => (
-    is      => 'ro',
-    isa     => 'HashRef',
-    traits  => ['Hash'],
-    default => sub { +{} },
-    handles => {
-        set_handle    => 'set',
-        delete_handle => 'delete',
-        handle_ids    => 'keys',
-        handle_list   => 'values',
-    },
-);
-
-sub BUILD {
-    my $self = shift;
-
-    my $host        = 'localhost';
-    my $server_port = 9092;
-    my $telnet_port = $self->telnet_port;
-
-    tcp_connect $host, $server_port, sub { $self->client_connect(@_) };
-    tcp_server  undef, $telnet_port, sub { $self->telnet_accept(@_) };
-}
 
 sub client_connect {
     my $self = shift;
