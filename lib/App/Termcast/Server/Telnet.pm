@@ -9,6 +9,9 @@ use Scalar::Util qw(weaken);
 
 use Reflex::Collection;
 
+use App::Termcast::Server::Telnet::Stream::Service;
+use App::Termcast::Server::Telnet::Stream::Connection;
+
 extends 'Reflex::Base';
 
 with 'Reflex::Role::Accepting', 'Reflex::Role::Streaming';
@@ -83,8 +86,24 @@ sub _build_handle {
 }
 
 has_many streams => (
-    handles => { remember_stream => 'rememer' },
+    handles => { remember_stream => 'remember' },
 );
+
+sub on_listener_accept {
+    my ($self, $args) = @_;
+    warn "ACCEPT";
+
+    my $stream = App::Termcast::Server::Telnet::Stream::Connection->new(
+        handle => $args->{socket},
+    );
+
+    $self->remember_stream($stream);
+}
+
+sub on_data {
+    my ($self, $args) = @_;
+    warn "SERVICE DATA: $args->{data}\n";
+}
 
 sub client_connect {
     my $self = shift;
@@ -223,7 +242,8 @@ sub dispatch_menu_inputs {
 
         weaken(my $weakself = $self);
         my $file = $self->get_stream($session)->{socket};
-        tcp_connect 'unix/', $file, sub {
+        #tcp_connect 'unix/', $file, sub {
+        {
             my $fh = shift or die "$file: $!";
             my $h = AnyEvent::Handle->new(
                 fh => $fh,
