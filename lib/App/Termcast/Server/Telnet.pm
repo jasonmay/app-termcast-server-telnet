@@ -81,6 +81,8 @@ sub _build_handle {
         Peer  => $self->service_socket,
     ) or die $!;
 
+    $s->syswrite(qq!{"request":"sessions"}!);
+
     warn "connected to " . $self->service_socket . ".\n";
     return $s;
 }
@@ -100,7 +102,7 @@ sub on_listener_accept {
     $self->remember_stream($stream);
 }
 
-sub on_data {
+sub on_handle_data {
     my ($self, $args) = @_;
     warn "SERVICE DATA: $args->{data}\n";
 }
