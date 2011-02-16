@@ -2,10 +2,8 @@
 package App::Termcast::Server::Telnet;
 use Moose;
 
-
 use Time::Duration;
-use Data::UUID::LibUUID;
-use Scalar::Util qw(weaken);
+use JSON;
 
 use Reflex::Collection;
 
@@ -105,43 +103,15 @@ sub on_listener_accept {
 sub on_handle_data {
     my ($self, $args) = @_;
     warn "SERVICE DATA: $args->{data}\n";
-}
 
-sub client_connect {
-    my $self = shift;
-    my ($fh) = @_
-        or die "localhost connect failed: $!";
-
-    my $h = AnyEvent::Handle->new(
-        fh => $fh,
-        on_read => sub {
-            my ($h, $host, $port) = @_;
-            $h->push_read(
-                json => sub {
-                    my ($h, $data) = @_;
-                    if ($data->{notice}) {
-                        $self->handle_server_notice($data);
-                    }
-                    elsif ($data->{response}) {
-                        $self->handle_server_response($data);
-                    }
-                }
-            );
-        },
-        on_error => sub {
-            my ($h, $fatal, $error) = @_;
-            warn $error;
-            exit 1 if $fatal;
-        },
-    );
-
-    $h->push_write(
-        json => +{
-            request => 'sessions',
-        }
-    );
-
-    $self->client_handle($h);
+    my $data = JSON::encode_json($args->{data});
+    $self->handle_server_notice($data);
+    if ($data->{notice}) {
+        $self->handle_server_notice($data);
+    }
+    elsif ($data->{response}) {
+        $self->handle_server_response($data);
+    }
 }
 
 sub telnet_accept {
