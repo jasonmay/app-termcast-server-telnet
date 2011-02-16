@@ -78,7 +78,7 @@ sub _build_handle {
         Peer  => $self->service_socket,
     ) or die $!;
 
-    $s->syswrite(qq!{"request":"sessions"}!);
+    $s->syswrite(JSON::encode_json({request => 'sessions'}));
 
     warn "connected to " . $self->service_socket . ".\n";
     return $s;
