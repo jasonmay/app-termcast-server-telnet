@@ -28,10 +28,59 @@ App::Termast::Server::Telnet - telnet interface for the termcast server
 =cut
 
 has telnet_port => (
-    is  => 'ro',
-    isa => 'Int',
-    default => 23,
+    is      => 'ro',
+    isa     => 'Int',
+    default => 2323,
 );
+
+has service_socket => (
+    is       => 'ro',
+    isa      => 'Str',
+    required => 1,
+);
+
+has listener => (
+    is => 'ro',
+    isa => 'FileHandle',
+    lazy => 1,
+    builder => '_build_listener',
+);
+
+sub _build_listener {
+    my $self = shift;
+
+    # TODO use IO::Socket::Telnet instead
+    # I'm on a plane and was too dumb to set
+    # up minicpan so I don't have ::Telnet
+    # on me. whoops!
+    my $l = IO::Socket::INET->new(
+        LocalPort => 2323,
+        Listen    => 1,
+        Reuse     => 1,
+    ) or die $!;
+
+    warn "listening on 2323.\n";
+
+    return $l;
+}
+
+has handle => (
+    is => 'ro',
+    isa => 'FileHandle',
+    lazy => 1,
+    builder => '_build_handle',
+);
+
+sub _build_handle {
+    my $self = shift;
+
+    my $s = IO::Socket::UNIX->new(
+        Peer  => $self->service_socket,
+    ) or die $!;
+
+    warn "connected to " . $self->service_socket . ".\n";
+    return $s;
+}
 
 has_many streams => (
     handles => { remember_stream => 'rememer' },
