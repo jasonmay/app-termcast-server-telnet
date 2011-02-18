@@ -1,6 +1,7 @@
 package App::Termcast::Server::Telnet;
 use Moose;
 
+use Bread::Board;
 use Reflex::Collection;
 
 use IO::Socket::UNIX;
@@ -31,6 +32,7 @@ sub _build_service_socket {
 }
 
 sub BUILD {
+    my $self = shift;
     container $self => as {
 
         # broadcaster sockets
@@ -49,16 +51,19 @@ sub BUILD {
             class     => 'App::Termcast::Server::Telnet::Acceptor',
             lifecycle => 'Singleton',
             dependencies => [
-                'conenction_pool',
+                'connection_pool',
                 'session_pool',
                 'telnet_dispatcher',
             ],
         );
 
         service service_stream => (
-            class     => 'Reflex::Base',
+            class     => 'Reflex::Stream',
             lifecycle => 'Singleton',
+            dependencies => { handle => 'service_handle' },
         );
+
+        service service_handle => $self->service_socket;
 
         service telnet_dispatcher => (
             class     => 'App::Termcast::Server::Telnet::Dispatcher::Connection',
