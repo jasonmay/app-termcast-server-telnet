@@ -28,7 +28,9 @@ sub _build_service_socket {
 
     my $socket = IO::Socket::UNIX->new(
         Peer => $self->service_socket_path,
-    );
+    ) or die $!;
+
+    return $socket;
 }
 
 sub BUILD {
