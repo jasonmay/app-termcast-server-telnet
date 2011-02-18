@@ -3,8 +3,6 @@ use Moose;
 
 extends 'Reflex::Stream';
 
-use constant CLEAR => "\e[2J\e[H";
-
 has viewing => (
     is  => 'rw',
     isa => 'Maybe[Str]',
