@@ -4,9 +4,9 @@ use Moose;
 use Bread::Board;
 use Reflex::Collection;
 
-use IO::Socket::UNIX;
+use IO qw(Socket::UNIX Socket::INET);
 
-extends 'Bread::Board::Container';
+extends 'Bread::Board::Container', 'Reflex::Base';
 
 has '+name' => (default => __PACKAGE__);
 
@@ -49,31 +49,33 @@ sub BUILD {
             lifecycle => 'Singleton',
         );
 
+        service telnet_listener => $self->telnet_listener;
         service telnet_acceptor => (
-            class     => 'App::Termcast::Server::Telnet::Acceptor',
+            class     => __PACKAGE__.'::Acceptor',
             lifecycle => 'Singleton',
-            dependencies => [
-                'connection_pool',
-                'session_pool',
-                'telnet_dispatcher',
-            ],
+            dependencies => {
+                connection_pool   => 'connection_pool',
+                session_pool      => 'session_pool',
+                telnet_dispatcher => 'telnet_dispatcher',
+                listener          => 'telnet_listener',
+                config            => 'config',
+            },
         );
 
+        service service_socket => $self->service_socket;
         service service_stream => (
             class     => 'Reflex::Stream',
             lifecycle => 'Singleton',
-            dependencies => { handle => 'service_handle' },
+            dependencies => { handle => 'service_socket' },
         );
 
-        service service_handle => $self->service_socket;
-
         service telnet_dispatcher => (
-            class     => 'App::Termcast::Server::Telnet::Dispatcher::Connection',
+            class     => __PACKAGE__.'::Dispatcher::Connection',
             lifecycle => 'Singleton',
         );
 
         service service_dispatcher => (
-            class     => 'App::Termcast::Server::Telnet::Dispatcher::Service',
+            class     => __PACKAGE__.'::Dispatcher::Service',
             lifecycle => 'Singleton',
         );
     };
