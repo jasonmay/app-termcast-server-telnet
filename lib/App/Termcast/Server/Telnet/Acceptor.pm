@@ -1,6 +1,8 @@
 package App::Termcast::Server::Telnet::Acceptor;
 use Moose;
 
+use App::Termcast::Server::Telnet::Stream::Connection;
+
 extends 'Reflex::Acceptor';
 
 has connection_pool => (
@@ -47,7 +49,7 @@ sub on_accept {
             )
         )
     );
-    $self->handle->syswrite($iac);
+    $self->listener->syswrite($iac);
 
     #   $self->remember_connection($stream);
 }
