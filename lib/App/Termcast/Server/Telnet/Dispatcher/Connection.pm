@@ -3,6 +3,12 @@ use Moose;
 
 use constant CLEAR => "\e[2J\e[H";
 
+has viewing => (
+    is      => 'ro',
+    isa     => 'Maybe[Str]',
+    clearer => '_clear_viewing',
+);
+
 sub dispatch_telnet_input {
     my $self = shift;
     my ($handle, $buf) = @_;
