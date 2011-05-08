@@ -33,9 +33,36 @@ sub _build_service_socket {
     return $socket;
 }
 
+has telnet_listener => (
+    is      => 'ro',
+    isa     => 'FileHandle',
+    lazy    => 1,
+    builder => '_build_telnet_listener',
+);
+
+sub _build_telnet_listener {
+    my $self = shift;
+
+    warn "load?";
+    my $socket = IO::Socket::INET->new(
+        LocalPort => 2323,
+    ) or die $!;
+
+    return $socket;
+}
+
+has config => (
+    is      => 'ro',
+    isa     => 'HashRef',
+    default => sub { YAML::LoadFile('etc/config.yml') },
+    lazy    => 1,
+);
+
 sub BUILD {
     my $self = shift;
     container $self => as {
+
+        service config => $self->config;
 
         # broadcaster sockets
         service session_pool => (
