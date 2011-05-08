@@ -56,12 +56,14 @@ has config => (
 has connection_pool => (
     is        => 'ro',
     isa       => 'Reflex::Collection',
+    block     => sub { Reflex::Collection->new( _owner => $_[1]->telnet_acceptor ) },
     lifecycle => 'Singleton',
 );
 
 has session_pool => (
     is        => 'ro',
     isa       => 'Reflex::Collection',
+    block     => sub { Reflex::Collection->new( _owner => $_[1]->telnet_acceptor ) },
     lifecycle => 'Singleton',
 );
 

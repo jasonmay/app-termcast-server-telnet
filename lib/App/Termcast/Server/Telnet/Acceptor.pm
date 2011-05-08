@@ -31,7 +31,6 @@ has telnet_dispatcher => (
 
 sub on_accept {
     my ($self, $args) = @_;
-    warn "ACCEPT";
 
     my $stream = App::Termcast::Server::Telnet::Stream::Connection->new(
         handle     => $args->{socket},
@@ -51,7 +50,7 @@ sub on_accept {
     );
     $self->listener->syswrite($iac);
 
-    #   $self->remember_connection($stream);
+    $self->remember_connection($stream);
 }
 
 __PACKAGE__->meta->make_immutable;
