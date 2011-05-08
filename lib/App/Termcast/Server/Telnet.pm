@@ -1,14 +1,12 @@
 package App::Termcast::Server::Telnet;
 use Moose;
 
-use Bread::Board;
+use Bread::Board::Declare;
 use Reflex::Collection;
 
 use IO qw(Socket::UNIX Socket::INET);
 
-extends 'Bread::Board::Container', 'Reflex::Base';
-
-has '+name' => (default => __PACKAGE__);
+use YAML;
 
 has service_socket_path => (
     is       => 'ro',
@@ -17,101 +15,92 @@ has service_socket_path => (
 );
 
 has service_socket => (
-    is      => 'ro',
-    isa     => 'FileHandle',
-    lazy    => 1,
-    builder => '_build_service_socket',
+    is    => 'ro',
+    isa   => 'FileHandle',
+    block => sub {
+        my $self = shift;
+
+        my $socket = IO::Socket::UNIX->new(
+            Peer => $self->service_socket_path,
+        ) or die $!;
+
+        return $socket;
+    },
 );
-
-sub _build_service_socket {
-    my $self = shift;
-
-    my $socket = IO::Socket::UNIX->new(
-        Peer => $self->service_socket_path,
-    ) or die $!;
-
-    return $socket;
-}
 
 has telnet_listener => (
-    is      => 'ro',
-    isa     => 'FileHandle',
-    lazy    => 1,
-    builder => '_build_telnet_listener',
+    is    => 'ro',
+    isa   => 'FileHandle',
+    block => sub {
+        my $self = shift;
+
+        warn "load?";
+        my $socket = IO::Socket::INET->new(
+            LocalPort => 2323,
+            Listen    => 1,
+            Reuse     => 1,
+        ) or die $!;
+
+        return $socket;
+    },
+    lifecycle => 'Singleton',
 );
-
-sub _build_telnet_listener {
-    my $self = shift;
-
-    warn "load?";
-    my $socket = IO::Socket::INET->new(
-        LocalPort => 2323,
-    ) or die $!;
-
-    return $socket;
-}
 
 has config => (
-    is      => 'ro',
-    isa     => 'HashRef',
-    default => sub { YAML::LoadFile('etc/config.yml') },
-    lazy    => 1,
+    is        => 'ro',
+    isa       => 'HashRef',
+    block     => sub {YAML::LoadFile('etc/config.yml') },
+    lifecycle => 'Singleton',
 );
 
-sub BUILD {
-    my $self = shift;
-    container $self => as {
+has connection_pool => (
+    is        => 'ro',
+    isa       => 'Reflex::Collection',
+    lifecycle => 'Singleton',
+);
 
-        service config => $self->config;
+has session_pool => (
+    is        => 'ro',
+    isa       => 'Reflex::Collection',
+    lifecycle => 'Singleton',
+);
 
-        # broadcaster sockets
-        service session_pool => (
-            class     => 'Reflex::Collection',
-            lifecycle => 'Singleton',
-        );
+has telnet_acceptor => (
+    is           => 'ro',
+    isa          => __PACKAGE__.'::Acceptor',
+    lifecycle    => 'Singleton',
+    dependencies => {
+        connection_pool   => 'connection_pool',
+        session_pool      => 'session_pool',
+        telnet_dispatcher => 'telnet_dispatcher',
+        listener          => 'telnet_listener',
+        config            => 'config',
+    },
+);
 
-        # users connected to telnet
-        service connection_pool => (
-            class     => 'Reflex::Collection',
-            lifecycle => 'Singleton',
-        );
+has service_stream => (
+    is           => 'ro',
+    isa          => 'Reflex::Stream',
+    lifecycle    => 'Singleton',
+    dependencies => { handle => 'service_socket' },
+);
 
-        service telnet_listener => $self->telnet_listener;
-        service telnet_acceptor => (
-            class     => __PACKAGE__.'::Acceptor',
-            lifecycle => 'Singleton',
-            dependencies => {
-                connection_pool   => 'connection_pool',
-                session_pool      => 'session_pool',
-                telnet_dispatcher => 'telnet_dispatcher',
-                listener          => 'telnet_listener',
-                config            => 'config',
-            },
-        );
+has telnet_dispatcher => (
+    is        => 'ro',
+    isa       => __PACKAGE__.'::Dispatcher::Connection',
+    lifecycle => 'Singleton',
+);
 
-        service service_socket => $self->service_socket;
-        service service_stream => (
-            class     => 'Reflex::Stream',
-            lifecycle => 'Singleton',
-            dependencies => { handle => 'service_socket' },
-        );
-
-        service telnet_dispatcher => (
-            class     => __PACKAGE__.'::Dispatcher::Connection',
-            lifecycle => 'Singleton',
-        );
-
-        service service_dispatcher => (
-            class     => __PACKAGE__.'::Dispatcher::Service',
-            lifecycle => 'Singleton',
-        );
-    };
-}
+has service_dispatcher => (
+    is        => 'ro',
+    isa       => __PACKAGE__.'::Dispatcher::Service',
+    lifecycle => 'Singleton',
+);
 
 sub run {
     my $self = shift;
 
-    my $acceptor = $self->resolve(service => 'telnet_acceptor');
+    my $acceptor = $self->get_service('telnet_acceptor')->get;
 
     $acceptor->run_all();
 }
