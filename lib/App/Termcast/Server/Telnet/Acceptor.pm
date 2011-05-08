@@ -27,7 +27,7 @@ has telnet_dispatcher => (
     required => 1,
 );
 
-sub on_listener_accept {
+sub on_accept {
     my ($self, $args) = @_;
     warn "ACCEPT";
 
@@ -49,7 +49,7 @@ sub on_listener_accept {
     );
     $self->handle->syswrite($iac);
 
-    $self->remember_connection($stream);
+    #   $self->remember_connection($stream);
 }
 
 __PACKAGE__->meta->make_immutable;
