@@ -106,7 +106,7 @@ has service_dispatcher => (
 sub run {
     my $self = shift;
 
-    my $acceptor = $self->get_service('telnet_acceptor')->get;
+    my $acceptor = $self->telnet_acceptor;
 
     $acceptor->run_all();
 }
