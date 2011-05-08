@@ -67,7 +67,7 @@ has connection_pool => (
 has session_pool => (
     is        => 'ro',
     isa       => 'Reflex::Collection',
-    block     => sub { Reflex::Collection->new( _owner => $_[1]->telnet_acceptor ) },
+    block     => sub { Reflex::Collection->new( _owner => $_[1]->service_stream ) },
     lifecycle => 'Singleton',
 );
 
@@ -86,7 +86,7 @@ has telnet_acceptor => (
 
 has service_stream => (
     is           => 'ro',
-    isa          => 'Reflex::Stream',
+    isa          => 'App::Termcast::Server::Telnet::Stream::Service',
     lifecycle    => 'Singleton',
     dependencies => { handle => 'service_socket' },
 );
