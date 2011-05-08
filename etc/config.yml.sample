@@ -1,0 +1,3 @@
+---
+host: myhost.com
+socket: ../app-termcast-server/connections.sock
