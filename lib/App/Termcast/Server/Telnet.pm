@@ -7,6 +7,7 @@ use Reflex::Collection;
 use IO qw(Socket::UNIX Socket::INET);
 
 use YAML;
+use JSON ();
 
 has service_socket_path => (
     is       => 'ro',
@@ -18,11 +19,14 @@ has service_socket => (
     is    => 'ro',
     isa   => 'FileHandle',
     block => sub {
-        my $self = shift;
+        my ($service, $self) = @_;
 
         my $socket = IO::Socket::UNIX->new(
             Peer => $self->service_socket_path,
         ) or die $!;
+
+        my $req_string = JSON::encode_json({request => 'sessions'});
+        $socket->syswrite($req_string);
 
         return $socket;
     },
