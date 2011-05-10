@@ -3,10 +3,27 @@ use Moose;
 
 extends 'Reflex::Base';
 
-with 'Reflex::Trait::Observed';
+use Reflex::Trait::Observed;
 
-# XXX hashref of observed unix streams?
-# XXX ETOOTIREDTOTHINK
+has unix_streams => (
+    is      => 'ro',
+    isa     => 'HashRef',
+    traits  => ['Hash'],
+    handles => {
+        unix_stream_objects    => 'values',
+        unix_stream_ids => 'keys'
+    },
+    default => sub { {} },
+);
+
+sub remember_stream {
+    my $self = shift;
+    my ($stream_id, $stream) = @_;
+
+    $self->watch($stream);
+    $self->unix_streams->{$stream_id} = $stream;
+
+}
 
 __PACKAGE__->meta->make_immutable;
 no Moose;
