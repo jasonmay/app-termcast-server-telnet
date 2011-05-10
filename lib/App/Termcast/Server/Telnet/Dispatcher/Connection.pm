@@ -9,6 +9,13 @@ has viewing => (
     clearer => '_clear_viewing',
 );
 
+has session_pool => (
+    is       => 'ro',
+    isa      => 'App::Termcast::Server::Telnet::Stream::Pool',
+    required => 1,
+    handles => ['unix_stream_ids', 'unix_stream_objects'],
+);
+
 sub dispatch_telnet_input {
     my $self = shift;
     my ($handle, $buf) = @_;
@@ -36,7 +43,7 @@ sub dispatch_menu_inputs {
     my ($handle, $buf) = @_;
 
     if ($buf eq 'q') {
-        $self->handle->syswrite(CLEAR);
+        $handle->syswrite(CLEAR);
         $self->stopped();
         return;
     }
@@ -84,7 +91,7 @@ sub send_connection_list {
     my $output;
 
     my $letter = 'a';
-    my @stream_data = $self->get_stream(sort $self->stream_ids);
+    my @stream_data = $self->unix_stream_objects;
     foreach my $stream (@stream_data) {
         $output .= sprintf "%s) %s - Active %s\r\n",
                    $letter,
@@ -95,7 +102,7 @@ sub send_connection_list {
 
     $output = "No active termcast sessions!\r\n" if !$output;
 
-    $self->handle->syswrite(CLEAR . "Users connected:\r\n\r\n$output");
+    $handle->syswrite(CLEAR . "Users connected:\r\n\r\n$output");
 }
 
 sub get_stream_from_key {
@@ -103,7 +110,7 @@ sub get_stream_from_key {
     my $key = shift;
     my %id_map;
 
-    my @stream_ids = $self->stream_ids;
+    my @stream_ids = $self->unix_stream_ids;
     my @keys       = ('a' .. 'p', 'r' .. 'z', 'A' .. 'Z');
     @id_map{ map { $keys[$_] } 0 .. @stream_ids } = sort @stream_ids;
 

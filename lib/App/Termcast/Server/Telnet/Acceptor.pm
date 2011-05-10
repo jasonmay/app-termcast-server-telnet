@@ -16,7 +16,7 @@ has connection_pool => (
 
 has session_pool => (
     is       => 'ro',
-    isa      => 'Reflex::Collection',
+    isa      => 'App::Termcast::Server::Telnet::Stream::Pool',
     required => 1,
     handles  => {
         remember_session => 'remember',

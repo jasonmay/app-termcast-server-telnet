@@ -66,8 +66,7 @@ has connection_pool => (
 
 has session_pool => (
     is        => 'ro',
-    isa       => 'Reflex::Collection',
-    block     => sub { Reflex::Collection->new( _owner => $_[1]->service_stream ) },
+    isa       => 'App::Termcast::Server::Telnet::Stream::Pool',
     lifecycle => 'Singleton',
 );
 
@@ -92,9 +91,10 @@ has service_stream => (
 );
 
 has telnet_dispatcher => (
-    is        => 'ro',
-    isa       => __PACKAGE__.'::Dispatcher::Connection',
-    lifecycle => 'Singleton',
+    is           => 'ro',
+    isa          => __PACKAGE__.'::Dispatcher::Connection',
+    dependencies => ['session_pool'],
+    lifecycle    => 'Singleton',
 );
 
 has service_dispatcher => (
