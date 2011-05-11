@@ -23,6 +23,7 @@ has dispatcher => (
 sub on_data {
     my ($self, $args) = @_;
 
+    $args->{data} =~ s/\xff..//g;
     warn "data: $args->{data}\n";
     $self->dispatcher->dispatch_telnet_input($self->handle, $args->{data});
 }

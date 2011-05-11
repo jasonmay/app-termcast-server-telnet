@@ -88,7 +88,10 @@ has service_stream => (
     is           => 'ro',
     isa          => 'App::Termcast::Server::Telnet::Stream::Service',
     lifecycle    => 'Singleton',
-    dependencies => { handle => 'service_socket' },
+    dependencies => {
+        session_pool => 'session_pool',
+        handle       => 'service_socket',
+    },
 );
 
 has telnet_dispatcher => (
@@ -107,6 +110,7 @@ has service_dispatcher => (
 sub run {
     my $self = shift;
 
+    $self->service_stream;
     my $acceptor = $self->telnet_acceptor;
 
     $acceptor->run_all();
