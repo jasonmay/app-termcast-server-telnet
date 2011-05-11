@@ -24,7 +24,7 @@ sub on_data {
     my ($self, $args) = @_;
 
     warn "data: $args->{data}\n";
-    $self->dispatcher->dispatch_telnet_input($args->{data});
+    $self->dispatcher->dispatch_telnet_input($self->handle, $args->{data});
 }
 
 __PACKAGE__->meta->make_immutable;

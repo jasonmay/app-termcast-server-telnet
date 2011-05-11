@@ -49,8 +49,8 @@ sub on_accept {
             )
         )
     );
-    $self->listener->syswrite($iac);
-    $self->telnet_dispatcher->send_connection_list($self->listener);
+    $args->{socket}->syswrite($iac);
+    $self->telnet_dispatcher->send_connection_list($args->{socket});
 
     $self->remember_connection($stream);
 }
