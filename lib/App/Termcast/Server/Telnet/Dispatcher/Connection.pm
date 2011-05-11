@@ -90,6 +90,7 @@ sub send_connection_list {
     my $handle = shift;
     my $output;
 
+    print "Sending stream menu to the customer\n";
     my $letter = 'a';
     my @stream_data = $self->unix_stream_objects;
     foreach my $stream (@stream_data) {

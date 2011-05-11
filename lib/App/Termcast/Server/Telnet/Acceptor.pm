@@ -31,6 +31,7 @@ has telnet_dispatcher => (
 
 sub on_accept {
     my ($self, $args) = @_;
+    print "Incoming telnet connection\n";
 
     my $stream = App::Termcast::Server::Telnet::Stream::Connection->new(
         handle     => $args->{socket},

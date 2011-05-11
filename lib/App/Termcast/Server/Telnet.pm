@@ -27,6 +27,7 @@ has service_socket => (
 
         my $req_string = JSON::encode_json({request => 'sessions'});
         $socket->syswrite($req_string);
+        print "Telnet -> Server (UNIX) loaded\n";
 
         return $socket;
     },
@@ -38,12 +39,12 @@ has telnet_listener => (
     block => sub {
         my $self = shift;
 
-        warn "load?";
         my $socket = IO::Socket::INET->new(
             LocalPort => 2323,
             Listen    => 1,
             Reuse     => 1,
         ) or die $!;
+        print "Telnet socket listening\n";
 
         return $socket;
     },
