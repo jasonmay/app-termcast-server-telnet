@@ -6,7 +6,7 @@ use Reflex::Collection;
 
 use IO qw(Socket::UNIX Socket::INET);
 
-use YAML;
+use YAML ();
 use JSON ();
 
 has service_socket_path => (
