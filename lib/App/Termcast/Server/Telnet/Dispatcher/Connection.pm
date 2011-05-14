@@ -1,10 +1,12 @@
 package App::Termcast::Server::Telnet::Dispatcher::Connection;
 use Moose;
 
+use Time::Duration;
+
 use constant CLEAR => "\e[2J\e[H";
 
 has viewing => (
-    is      => 'ro',
+    is      => 'rw',
     isa     => 'Maybe[Str]',
     clearer => '_clear_viewing',
 );
@@ -96,8 +98,8 @@ sub send_connection_list {
     foreach my $stream (@stream_data) {
         $output .= sprintf "%s) %s - Active %s\r\n",
                    $letter,
-                   $stream->{user},
-                   ago(time() - $stream->{last_active});
+                   $stream->username,
+                   ago(time() - $stream->last_active->epoch);
         $letter++;
     }
 

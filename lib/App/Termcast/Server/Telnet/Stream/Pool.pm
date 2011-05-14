@@ -11,7 +11,8 @@ has unix_streams => (
     traits  => ['Hash'],
     handles => {
         unix_stream_objects    => 'values',
-        unix_stream_ids => 'keys'
+        unix_stream_ids => 'keys',
+        get_unix_stream => 'get',
     },
     default => sub { {} },
 );
