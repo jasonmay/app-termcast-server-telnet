@@ -35,7 +35,7 @@ sub dispatch_stream_inputs {
     my ($handle, $buf) = @_;
 
     if ($buf eq 'q') {
-        $self->stopped();
+        $self->_clear_viewing;
         $self->send_connection_list($handle);
     }
 }
