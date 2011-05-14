@@ -46,7 +46,7 @@ sub dispatch_menu_inputs {
 
     if ($buf eq 'q') {
         $handle->syswrite(CLEAR);
-        $self->stopped();
+        $handle->close();
         return;
     }
 
