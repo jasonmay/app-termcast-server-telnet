@@ -33,11 +33,6 @@ sub on_accept {
     my ($self, $args) = @_;
     print "Incoming telnet connection\n";
 
-    my $stream = App::Termcast::Server::Telnet::Stream::Connection->new(
-        handle     => $args->{socket},
-        dispatcher => $self->telnet_dispatcher,
-    );
-
     my $iac = join(
         '',
         (
@@ -51,6 +46,11 @@ sub on_accept {
     );
     $args->{socket}->syswrite($iac);
     $self->telnet_dispatcher->send_connection_list($args->{socket});
+
+    my $stream = App::Termcast::Server::Telnet::Stream::Connection->new(
+        handle     => $args->{socket},
+        dispatcher => $self->telnet_dispatcher,
+    );
 
     $self->remember_connection($stream);
 }

@@ -1,11 +1,12 @@
 package App::Termcast::Server::Telnet::Stream::Service;
 use Moose;
+extends 'Reflex::Stream';
+
+use Reflex::Collection;
 
 use JSON ();
 
 use App::Termcast::Server::Telnet::Stream::Session;
-
-extends 'Reflex::Stream';
 
 has session_pool => (
     is       => 'ro',
@@ -13,20 +14,15 @@ has session_pool => (
     required => 1,
 );
 
-# {
-#  response => "sessions",
-#  sessions => [
-#    {
-#      geometry => [
-#        80,
-#        24
-#      ],
-#      last_active => "1305076517",
-#      session_id => "9845f356-7b6b-11e0-9efa-3ff7049b7e5f",
-#      socket => "/tmp/328u7FuQD3",
-#      user => "jasonmay"
-#    }
-#  ]
+has connection_pool => (
+    is       => 'ro',
+    isa      => 'Reflex::Collection',
+    required => 1,
+);
+
+has_many session_collection => (
+    handles => ['remember'],
+);
 
 sub on_data {
     my ($self, $args) = @_;

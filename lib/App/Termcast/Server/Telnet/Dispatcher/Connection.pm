@@ -53,34 +53,12 @@ sub dispatch_menu_inputs {
     my $session = $self->get_stream_from_key($buf);
 
     if ($session) {
-        $handle->session->viewing($session);
-        $handle->push_write(CLEAR);
+        $self->viewing($session);
+        $handle->syswrite(CLEAR);
 
-        my $file = $self->get_stream($session)->{socket};
-        {
-            my $fh = shift or die "$file: $!";
-            my $h = AnyEvent::Handle->new(
-                fh => $fh,
-                on_read => sub {
-                    my $h = shift;
-                    $handle->push_write($h->rbuf);
-                    $h->{rbuf} = '';
-                },
-                on_error => sub {
-                    my ($h, $fatal, $error) = @_;
+        #my $file = $self->session_pool->get_unix_stream($session)->handle_path;
 
-                    if ($fatal) {
-                        $handle->session->_clear_viewing;
-                        $handle->session->_clear_stream_handle;
-                        $self->send_connection_list($handle);
-                    }
-                    else {
-                        warn $error;
-                    }
-                }
-            );
-            $handle->session->stream_handle($h);
-        };
+        print "connecting to $session\n";
     }
     else {
         $self->send_connection_list($handle);
