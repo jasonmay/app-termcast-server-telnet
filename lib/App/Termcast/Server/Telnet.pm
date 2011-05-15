@@ -68,7 +68,7 @@ has connection_pool => (
 
 has session_pool => (
     is        => 'ro',
-    isa       => 'App::Termcast::Server::Telnet::Stream::Pool',
+    isa       => __PACKAGE__.'::Stream::Pool',
     lifecycle => 'Singleton',
 );
 
@@ -87,7 +87,7 @@ has telnet_acceptor => (
 
 has service_stream => (
     is           => 'ro',
-    isa          => 'App::Termcast::Server::Telnet::Stream::Service',
+    isa          => __PACKAGE__.'::Stream::Service',
     lifecycle    => 'Singleton',
     dependencies => {
         session_pool => 'session_pool',
