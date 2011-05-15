@@ -52,19 +52,20 @@ has username => (
 sub BUILD { warn 'BUILD: ' . $_[0]->handle }
 sub DEMOLISH { warn 'DESTROY: ' . $_[0]->handle }
 
-sub on_handle_data {
+sub on_data {
     my ($self, $args) = @_;
+    #warn "data: $args->{data}";
 
     my @connections = values %{$self->connection_pool->objects};
 
     foreach my $conn (@connections) {
-        next unless $conn->viewing eq $self->stream_id;
+        next unless $conn->viewing && $conn->viewing eq $self->stream_id;
 
-        $conn->handle->syswrite($args->{data});
+        $conn->put($args->{data});
     }
 }
 
-sub on_handle_error { warn $_[0]->handle }
+sub on_error { warn $_[0]->handle }
 
 __PACKAGE__->meta->make_immutable;
 no Moose;

@@ -39,7 +39,7 @@ sub dispatch_menu_inputs {
     my ($stream, $buf) = @_;
 
     if ($buf eq 'q') {
-        $stream->handle->syswrite(CLEAR);
+        $stream->put(CLEAR);
         $stream->stopped();
         return;
     }
