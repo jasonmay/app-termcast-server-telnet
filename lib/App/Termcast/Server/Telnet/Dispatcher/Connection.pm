@@ -52,12 +52,12 @@ sub dispatch_menu_inputs {
     my $session = $self->get_stream_from_key($buf);
 
     if ($session) {
-        $self->viewing($session);
+        $stream->viewing($session);
         $stream->handle->syswrite(CLEAR);
 
         #my $file = $self->session_pool->get_unix_stream($session)->handle_path;
 
-        print "connecting to $session\n";
+        print "viewing $session\n";
     }
     else {
         $self->send_connection_list($stream->handle);

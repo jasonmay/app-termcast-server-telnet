@@ -27,8 +27,6 @@ has_many session_collection => (
 sub on_data {
     my ($self, $args) = @_;
 
-    warn "data: $args->{data}\n";
-
     my $data = JSON::decode_json($args->{data});
 
     if ($data->{sessions}) {
@@ -38,7 +36,6 @@ sub on_data {
         }
 
         foreach my $session (@{ $data->{sessions} }) {
-            warn $session->{socket};
             my $handle = IO::Socket::UNIX->new(
                 Peer => $session->{socket},
             ) or do {
@@ -46,7 +43,7 @@ sub on_data {
                 next;
             };
 
-            warn "Connecting to $session->{socket}";
+            print "Connecting to $session->{socket}\n";
 
             my %params = (
                 username        => $session->{user},
