@@ -53,6 +53,8 @@ sub dispatch_menu_inputs {
         #my $file = $self->session_pool->get_unix_stream($session)->handle_path;
 
         print "viewing $session\n";
+
+        $stream->put($self->session_pool->get_unix_stream($session)->buffer);
     }
     else {
         $self->send_connection_list($stream->handle);

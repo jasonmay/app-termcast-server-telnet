@@ -42,12 +42,17 @@ has username => (
     required => 1,
 );
 
-sub BUILD { warn 'BUILD: ' . $_[0]->handle }
-sub DEMOLISH { warn 'DESTROY: ' . $_[0]->handle }
+has buffer => (
+    is      => 'rw',
+    isa     => 'Str',
+    default => '',
+);
 
 sub on_data {
     my ($self, $args) = @_;
-    #warn "data: $args->{data}";
+
+
+    $self->{buffer} .= $args->{data};
 
     my @connections = values %{$self->connection_pool->objects};
 
