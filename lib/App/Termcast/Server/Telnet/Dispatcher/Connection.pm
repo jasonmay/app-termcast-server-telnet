@@ -5,12 +5,6 @@ use Time::Duration;
 
 use constant CLEAR => "\e[2J\e[H";
 
-has viewing => (
-    is      => 'rw',
-    isa     => 'Maybe[Str]',
-    clearer => '_clear_viewing',
-);
-
 has session_pool => (
     is       => 'ro',
     isa      => 'App::Termcast::Server::Telnet::Stream::Pool',
@@ -20,8 +14,9 @@ has session_pool => (
 
 sub dispatch_telnet_input {
     my $self = shift;
+    my ($stream) = @_;
 
-    if ($self->viewing) {
+    if ($stream->viewing) {
         $self->dispatch_stream_inputs(@_);
     }
     else {
@@ -34,7 +29,7 @@ sub dispatch_stream_inputs {
     my ($stream, $buf) = @_;
 
     if ($buf eq 'q') {
-        $self->_clear_viewing;
+        $stream->_clear_viewing;
         $self->send_connection_list($stream->handle);
     }
 }
