@@ -1,16 +1,9 @@
 package App::Termcast::Server::Telnet::Stream::Session;
 use Moose;
-extends 'Reflex::Base';
-with 'Reflex::Role::Reading';
+extends 'Reflex::Stream';
 
 use MooseX::Types::DateTime;
 use DateTime;
-
-has handle => (
-    is       => 'ro',
-    isa      => 'IO::Socket::UNIX',
-    required => 1,
-);
 
 has connection_pool => (
     is       => 'ro',
