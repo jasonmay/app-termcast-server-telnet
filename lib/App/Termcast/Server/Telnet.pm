@@ -1,5 +1,6 @@
 package App::Termcast::Server::Telnet;
 use Moose;
+with 'Reflex::Role::Reactive'; # BBD prohibits MI
 
 use Bread::Board::Declare;
 use Reflex::Collection;
@@ -110,10 +111,10 @@ has service_dispatcher => (
 sub run {
     my $self = shift;
 
-    $self->service_stream;
-    my $acceptor = $self->telnet_acceptor;
+    $self->watch($self->service_stream);
+    $self->watch($self->telnet_acceptor);
 
-    $acceptor->run_all();
+    $self->run_all();
 }
 
 __PACKAGE__->meta->make_immutable;
