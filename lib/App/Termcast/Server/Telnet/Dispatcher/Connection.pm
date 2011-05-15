@@ -20,7 +20,6 @@ has session_pool => (
 
 sub dispatch_telnet_input {
     my $self = shift;
-    my ($handle, $buf) = @_;
 
     if ($self->viewing) {
         $self->dispatch_stream_inputs(@_);
@@ -32,21 +31,21 @@ sub dispatch_telnet_input {
 
 sub dispatch_stream_inputs {
     my $self = shift;
-    my ($handle, $buf) = @_;
+    my ($stream, $buf) = @_;
 
     if ($buf eq 'q') {
         $self->_clear_viewing;
-        $self->send_connection_list($handle);
+        $self->send_connection_list($stream->handle);
     }
 }
 
 sub dispatch_menu_inputs {
     my $self = shift;
-    my ($handle, $buf) = @_;
+    my ($stream, $buf) = @_;
 
     if ($buf eq 'q') {
-        $handle->syswrite(CLEAR);
-        $handle->close();
+        $stream->handle->syswrite(CLEAR);
+        $stream->stopped();
         return;
     }
 
@@ -54,14 +53,14 @@ sub dispatch_menu_inputs {
 
     if ($session) {
         $self->viewing($session);
-        $handle->syswrite(CLEAR);
+        $stream->handle->syswrite(CLEAR);
 
         #my $file = $self->session_pool->get_unix_stream($session)->handle_path;
 
         print "connecting to $session\n";
     }
     else {
-        $self->send_connection_list($handle);
+        $self->send_connection_list($stream->handle);
     }
 }
 
