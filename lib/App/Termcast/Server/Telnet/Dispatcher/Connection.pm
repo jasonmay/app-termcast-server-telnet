@@ -54,7 +54,7 @@ sub dispatch_menu_inputs {
 
         print "viewing $session\n";
 
-        $stream->put($self->session_pool->get_unix_stream($session)->buffer);
+        $stream->handle->syswrite($self->session_pool->get_unix_stream($session)->buffer);
     }
     else {
         $self->send_connection_list($stream->handle);

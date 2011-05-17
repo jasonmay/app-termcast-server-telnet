@@ -59,7 +59,7 @@ sub on_data {
     foreach my $conn (@connections) {
         next unless $conn->viewing && $conn->viewing eq $self->stream_id;
 
-        $conn->put($args->{data});
+        $conn->handle->syswrite($args->{data});
     }
 }
 
