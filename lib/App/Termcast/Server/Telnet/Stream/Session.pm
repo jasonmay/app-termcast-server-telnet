@@ -53,6 +53,9 @@ sub on_data {
 
 
     $self->{buffer} .= $args->{data};
+    if ($args->{data} =~ s/.+\e\[2J//s) {
+        $self->{buffer} = $args->{data};
+    }
 
     my @connections = values %{$self->connection_pool->objects};
 
