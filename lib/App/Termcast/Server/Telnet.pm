@@ -90,9 +90,10 @@ has service_stream => (
     isa          => __PACKAGE__.'::Stream::Service',
     lifecycle    => 'Singleton',
     dependencies => {
-        connection_pool => 'connection_pool',
-        session_pool    => 'session_pool',
-        handle          => 'service_socket',
+        connection_pool   => 'connection_pool',
+        session_pool      => 'session_pool',
+        handle            => 'service_socket',
+        telnet_dispatcher => 'telnet_dispatcher',
     },
 );
 

@@ -20,9 +20,52 @@ has connection_pool => (
     required => 1,
 );
 
+has telnet_dispatcher => (
+    is       => 'ro',
+    isa      => 'App::Termcast::Server::Telnet::Dispatcher::Connection',
+    required => 1,
+);
+
 has_many session_collection => (
     handles => ['remember'],
 );
+
+sub _new_session_obj_from_packet {
+    my $self = shift;
+    my ($session) = @_;
+
+    my $handle = IO::Socket::UNIX->new(
+        Peer => $session->{socket},
+    ) or do {
+        warn $!;
+        next;
+    };
+
+    print "Connecting to $session->{socket}\n";
+
+    my %params = (
+        username        => $session->{user},
+        last_active     => $session->{last_active},
+        stream_id       => $session->{session_id},
+        handle_path     => $session->{socket},
+        connection_pool => $self->connection_pool,
+        handle          => $handle,
+        $session->{geometry} ? (
+            cols => $session->{geometry}->[0],
+            rows => $session->{geometry}->[1],
+        ) : (),
+    );
+
+    # ugh long class names
+    my $session_class = 'App::Termcast::Server::Telnet::Stream::Session';
+    my $session_object = $session_class->new(%params);
+
+    $self->session_pool->remember_stream(
+        $session->{session_id} => $session_object,
+    );
+
+    $self->remember($session_object);
+}
 
 sub on_data {
     my ($self, $args) = @_;
@@ -36,44 +79,24 @@ sub on_data {
         }
 
         foreach my $session (@{ $data->{sessions} }) {
-            my $handle = IO::Socket::UNIX->new(
-                Peer => $session->{socket},
-            ) or do {
-                warn $!;
-                next;
-            };
-
-            print "Connecting to $session->{socket}\n";
-
-            my %params = (
-                username        => $session->{user},
-                last_active     => $session->{last_active},
-                stream_id       => $session->{session_id},
-                handle_path     => $session->{socket},
-                connection_pool => $self->connection_pool,
-                handle          => $handle,
-                $session->{geometry} ? (
-                    cols => $session->{geometry}->[0],
-                    rows => $session->{geometry}->[1],
-                ) : (),
-            );
-
-            # ugh long class names
-            my $session_class = 'App::Termcast::Server::Telnet::Stream::Session';
-            my $session_object = $session_class->new(%params);
-
-            $self->session_pool->remember_stream(
-                $session->{session_id} => $session_object,
-            );
-
-            $self->remember($session_object);
+            $self->_new_session_obj_from_packet($session);
         }
     }
     elsif ($data->{notice}) {
-        warn "got a 'notice' message";
-    }
+        if ($data->{notice} eq 'connect') {
+            my $session = $data->{connection};
 
-    #use Data::Dumper::Concise; die Dumper($data);
+            $self->_new_session_obj_from_packet($session);
+
+            my @connections = values %{$self->connection_pool->objects};
+
+            foreach my $conn (@connections) {
+                next if $conn->viewing;
+                $self->telnet_dispatcher->send_connection_list($conn->handle);
+            }
+        }
+        # TODO handle geometry, etc
+    }
 }
 
 __PACKAGE__->meta->make_immutable;
