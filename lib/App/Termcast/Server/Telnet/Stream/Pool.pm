@@ -11,16 +11,11 @@ has unix_streams => (
         unix_stream_objects => 'values',
         unix_stream_ids     => 'keys',
         get_unix_stream     => 'get',
+        remember_stream     => 'set',
+        forget_stream       => 'delete',
     },
     default => sub { {} },
 );
-
-sub remember_stream {
-    my $self = shift;
-    my ($stream_id, $stream) = @_;
-
-    $self->unix_streams->{$stream_id} = $stream;
-}
 
 __PACKAGE__->meta->make_immutable;
 no Moose;

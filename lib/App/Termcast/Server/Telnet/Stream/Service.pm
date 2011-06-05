@@ -83,17 +83,31 @@ sub on_data {
         }
     }
     elsif ($data->{notice}) {
+        my @connections = values %{$self->connection_pool->objects};
+
         if ($data->{notice} eq 'connect') {
             my $session = $data->{connection};
 
             $self->_new_session_obj_from_packet($session);
 
-            my @connections = values %{$self->connection_pool->objects};
-
             foreach my $conn (@connections) {
                 next if $conn->viewing;
                 $self->telnet_dispatcher->send_connection_list($conn->handle);
             }
+        }
+        elsif ($data->{notice} eq 'disconnect') {
+            my $stream_id = $data->{session_id};
+
+            foreach my $conn (@connections) {
+                $conn->_clear_viewing
+                    if $conn->viewing && $conn->viewing eq $stream_id;
+                $self->telnet_dispatcher->send_connection_list($conn->handle);
+
+            }
+
+            $self->session_pool->get_unix_stream($stream_id)->stopped();
+            $self->session_pool->forget_stream($stream_id);
+            print "Disconnecting $stream_id\n";
         }
         # TODO handle geometry, etc
     }
