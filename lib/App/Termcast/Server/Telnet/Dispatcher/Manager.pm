@@ -1,4 +1,4 @@
-package App::Termcast::Server::Telnet::Dispatcher::Service;
+package App::Termcast::Server::Telnet::Dispatcher::Manager;
 use Moose;
 
 sub dispatch {

@@ -10,20 +10,20 @@ use IO qw(Socket::UNIX Socket::INET);
 use YAML ();
 use JSON ();
 
-has service_socket_path => (
+has manager_socket_path => (
     is       => 'ro',
     isa      => 'Str',
     required => 1,
 );
 
-has service_socket => (
+has manager_socket => (
     is    => 'ro',
     isa   => 'FileHandle',
     block => sub {
-        my ($service, $self) = @_;
+        my ($manager, $self) = @_;
 
         my $socket = IO::Socket::UNIX->new(
-            Peer => $self->service_socket_path,
+            Peer => $self->manager_socket_path,
         ) or die $!;
 
         my $req_string = JSON::encode_json({request => 'sessions'});
@@ -85,14 +85,14 @@ has telnet_acceptor => (
     },
 );
 
-has service_stream => (
+has manager_stream => (
     is           => 'ro',
-    isa          => __PACKAGE__.'::Stream::Service',
+    isa          => __PACKAGE__.'::Stream::Manager',
     lifecycle    => 'Singleton',
     dependencies => {
         connection_pool   => 'connection_pool',
         session_pool      => 'session_pool',
-        handle            => 'service_socket',
+        handle            => 'manager_socket',
         telnet_dispatcher => 'telnet_dispatcher',
     },
 );
@@ -104,16 +104,16 @@ has telnet_dispatcher => (
     lifecycle    => 'Singleton',
 );
 
-has service_dispatcher => (
+has manager_dispatcher => (
     is        => 'ro',
-    isa       => __PACKAGE__.'::Dispatcher::Service',
+    isa       => __PACKAGE__.'::Dispatcher::Manager',
     lifecycle => 'Singleton',
 );
 
 sub run {
     my $self = shift;
 
-    $self->watch($self->service_stream);
+    $self->watch($self->manager_stream);
     $self->watch($self->telnet_acceptor);
 
     $self->run_all();

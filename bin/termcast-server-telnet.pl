@@ -11,6 +11,6 @@ die "Arg required (socket path)" if !@ARGV;
 
 my $socket = Cwd::abs_path($ARGV[0]);
 
-my $app = App::Termcast::Server::Telnet->new(service_socket_path => $socket);
+my $app = App::Termcast::Server::Telnet->new(manager_socket_path => $socket);
 
 $app->run();

@@ -1,4 +1,4 @@
-package App::Termcast::Server::Telnet::Stream::Service;
+package App::Termcast::Server::Telnet::Stream::Manager;
 use Moose;
 extends 'Reflex::Stream';
 
@@ -74,7 +74,7 @@ sub on_data {
 
     if ($data->{sessions}) {
         if (not ref $data->{sessions} or ref($data->{sessions}) ne 'ARRAY') {
-            warn 'invalid data into service stream: invalid "sessions" key';
+            warn 'invalid data into manager stream: invalid "sessions" key';
             return;
         }
 
