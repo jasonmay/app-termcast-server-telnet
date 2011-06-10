@@ -11,10 +11,16 @@ use YAML ();
 use JSON ();
 
 has manager_socket_path => (
-    is       => 'ro',
-    isa      => 'Str',
-    required => 1,
+    is      => 'ro',
+    isa     => 'Str',
+    builder => '_build_manager_socket_path',
+    lazy    => 1,
 );
+
+sub _build_manager_socket_path {
+    my $self = shift;
+    return $self->config->{socket};
+}
 
 has manager_socket => (
     is    => 'ro',

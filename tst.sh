@@ -1,1 +1,1 @@
-sudo perl -Ilib bin/termcast-server-telnet.pl ../app-termcast-server/connections.sock
+sudo perl -I../app-termcast-connector/lib -Ilib bin/termcast-server-telnet.pl
