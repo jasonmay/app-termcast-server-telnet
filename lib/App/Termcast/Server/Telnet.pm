@@ -10,35 +10,20 @@ use IO qw(Socket::UNIX Socket::INET);
 use YAML ();
 use JSON ();
 
+use App::Termcast::Connector;
+
 has manager_socket_path => (
     is      => 'ro',
     isa     => 'Str',
-    builder => '_build_manager_socket_path',
-    lazy    => 1,
+    block   => sub { shift->get_param('config')->{socket} },
+    lifecycle => 'Singleton',
+    dependencies => ['config'],
 );
 
 sub _build_manager_socket_path {
     my $self = shift;
     return $self->config->{socket};
 }
-
-has manager_socket => (
-    is    => 'ro',
-    isa   => 'FileHandle',
-    block => sub {
-        my ($manager, $self) = @_;
-
-        my $socket = IO::Socket::UNIX->new(
-            Peer => $self->manager_socket_path,
-        ) or die $!;
-
-        my $req_string = JSON::encode_json({request => 'sessions'});
-        $socket->syswrite($req_string);
-        print "Telnet -> Server (UNIX) loaded\n";
-
-        return $socket;
-    },
-);
 
 has telnet_listener => (
     is    => 'ro',
@@ -94,11 +79,20 @@ has telnet_acceptor => (
 has manager_stream => (
     is           => 'ro',
     isa          => __PACKAGE__.'::Stream::Manager',
+    block        => sub {
+        my ($s, $self) = @_;
+        my %constructor_params = %{ $s->params };
+
+        return App::Termcast::Server::Telnet::Stream::Manager->new(
+            %constructor_params,
+            handle => $s->get_param('connector')->manager_socket,
+        );
+    },
     lifecycle    => 'Singleton',
     dependencies => {
         connection_pool   => 'connection_pool',
         session_pool      => 'session_pool',
-        handle            => 'manager_socket',
+        connector         => 'connector',
         telnet_dispatcher => 'telnet_dispatcher',
     },
 );
@@ -110,14 +104,81 @@ has telnet_dispatcher => (
     lifecycle    => 'Singleton',
 );
 
-has manager_dispatcher => (
-    is        => 'ro',
-    isa       => __PACKAGE__.'::Dispatcher::Manager',
-    lifecycle => 'Singleton',
+has connector => (
+    is           => 'ro',
+    isa          => 'App::Termcast::Connector',
+    dependencies => ['manager_socket_path'],
+    lifecycle    => 'Singleton',
 );
+
+sub _new_session_obj_from_data {
+    my $self = shift;
+    my ($session) = @_;
+
+    my $handle = $self->connector->make_socket($session);
+
+    print "Connecting to $session->{socket}\n";
+
+    my %params = (
+        username        => $session->{user},
+        last_active     => $session->{last_active},
+        stream_id       => $session->{session_id},
+        handle_path     => $session->{socket},
+        connection_pool => $self->connection_pool,
+        handle          => $handle,
+        $session->{geometry} ? (
+            cols => $session->{geometry}->[0],
+            rows => $session->{geometry}->[1],
+        ) : (),
+    );
+
+    # ugh long class names
+    my $session_class = 'App::Termcast::Server::Telnet::Stream::Session';
+    my $session_object = $session_class->new(%params);
+
+    $self->session_pool->remember_stream(
+        $session->{session_id} => $session_object,
+    );
+
+    $self->manager_stream->remember($session_object);
+}
 
 sub run {
     my $self = shift;
+
+    $self->connector->request_sessions;
+
+    my $sessions_cb = sub {
+        my ($connector, @sessions) = @_;
+        $self->_new_session_obj_from_data($_) for @sessions;
+    };
+
+    my $connect_cb = sub {
+        my ($connector, $data) = @_;
+        $self->_new_session_obj_from_data($data);
+        my @connections = values %{$self->connection_pool->objects};
+        foreach my $conn (@connections) {
+            next if $conn->viewing;
+            $self->telnet_dispatcher->send_connection_list($conn->handle);
+        }
+    };
+
+    my $disconnect_cb = sub {
+        my ($connector, $session_id) = @_;
+        my @connections = values %{$self->connection_pool->objects};
+        foreach my $conn (@connections) {
+            $conn->_clear_viewing
+                if $conn->viewing && $conn->viewing eq $session_id;
+            $self->telnet_dispatcher->send_connection_list($conn->handle);
+        }
+
+        $self->session_pool->get_unix_stream($session_id)->stopped();
+        $self->session_pool->forget_stream($session_id);
+    };
+
+    $self->connector->register_sessions_callback($sessions_cb);
+    $self->connector->register_connect_callback($connect_cb);
+    $self->connector->register_disconnect_callback($disconnect_cb);
 
     $self->watch($self->manager_stream);
     $self->watch($self->telnet_acceptor);
