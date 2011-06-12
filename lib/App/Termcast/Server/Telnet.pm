@@ -11,6 +11,7 @@ use YAML ();
 use JSON ();
 
 use App::Termcast::Connector;
+use App::Termcast::Server::Telnet::Stream::Session;
 
 has manager_socket_path => (
     is      => 'ro',
