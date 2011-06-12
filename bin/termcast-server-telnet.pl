@@ -4,8 +4,7 @@ use warnings;
 
 use Cwd;
 
-use lib 'lib',
-        '../app-termcast-connector/lib';
+use lib 'lib';
 use App::Termcast::Server::Telnet;
 
 my $app = App::Termcast::Server::Telnet->new;
