@@ -6,8 +6,6 @@ use Reflex::Collection;
 
 use JSON ();
 
-use App::Termcast::Server::Telnet::Stream::Session;
-
 has session_pool => (
     is       => 'ro',
     isa      => 'App::Termcast::Server::Telnet::Stream::Pool',
