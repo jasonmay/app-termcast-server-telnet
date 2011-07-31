@@ -1,4 +1,5 @@
 package App::Termcast::Server::Telnet;
+# ABSTRACT: core of the Termcast telnet server
 use Moose;
 with 'Reflex::Role::Reactive'; # BBD prohibits MI
 

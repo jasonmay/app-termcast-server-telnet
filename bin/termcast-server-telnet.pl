@@ -1,4 +1,5 @@
 #!/usr/bin/env perl
+# PODNAME: termcase-server-telnet.pl
 use strict;
 use warnings;
 
