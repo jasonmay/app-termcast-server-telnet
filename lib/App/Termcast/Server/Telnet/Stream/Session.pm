@@ -57,7 +57,7 @@ sub on_data {
         $self->{buffer} = $args->{data};
     }
 
-    my @connections = values %{$self->connection_pool->objects};
+    my @connections = $self->connection_pool->get_objects;
 
     foreach my $conn (@connections) {
         next unless $conn->viewing && $conn->viewing eq $self->stream_id;

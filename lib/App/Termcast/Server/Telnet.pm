@@ -158,7 +158,7 @@ sub run {
     my $connect_cb = sub {
         my ($connector, $data) = @_;
         $self->_new_session_obj_from_data($data);
-        my @connections = values %{$self->connection_pool->objects};
+        my @connections = $self->connection_pool->get_objects;
         foreach my $conn (@connections) {
             next if $conn->viewing;
             $self->telnet_dispatcher->send_connection_list($conn->handle);
@@ -167,7 +167,7 @@ sub run {
 
     my $disconnect_cb = sub {
         my ($connector, $session_id) = @_;
-        my @connections = values %{$self->connection_pool->objects};
+        my @connections = values $self->connection_pool->get_objects;
         foreach my $conn (@connections) {
             $conn->_clear_viewing
                 if $conn->viewing && $conn->viewing eq $session_id;
