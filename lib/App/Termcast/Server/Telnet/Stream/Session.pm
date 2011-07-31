@@ -12,13 +12,13 @@ has connection_pool => (
 );
 
 has cols => (
-    is      => 'ro',
+    is      => 'rw',
     isa     => 'Int',
     default => 80,
 );
 
 has rows => (
-    is      => 'ro',
+    is      => 'rw',
     isa     => 'Int',
     default => 24,
 );

@@ -70,9 +70,10 @@ sub send_connection_list {
     my $letter = 'a';
     my @stream_data = $self->unix_stream_objects;
     foreach my $stream (@stream_data) {
-        $output .= sprintf "%s) %s - Active %s\r\n",
+        $output .= sprintf "%s) %s (%s) - Active %s\r\n",
                    $letter,
                    $stream->username,
+                   $stream->cols . 'x' . $stream->rows,
                    ago(time() - $stream->last_active->epoch);
         $letter++;
     }

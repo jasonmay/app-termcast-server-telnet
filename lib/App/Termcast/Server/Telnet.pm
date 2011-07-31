@@ -165,6 +165,26 @@ sub run {
         }
     };
 
+    my $metadata_cb = sub {
+        my ($connector, $session_id, $data) = @_;
+
+        my $something_changed = 0;
+
+        if ($something_changed = $data->{geometry}) {
+            my $stream = $self->session_pool->get_unix_stream($session_id);
+            $stream->cols($data->{geometry}->[0]);
+            $stream->rows($data->{geometry}->[1]);
+        }
+
+        if ($something_changed) {
+            my @connections = $self->connection_pool->get_objects;
+            foreach my $conn (@connections) {
+                next if $conn->viewing;
+                $self->telnet_dispatcher->send_connection_list($conn->handle);
+            }
+        }
+    };
+
     my $disconnect_cb = sub {
         my ($connector, $session_id) = @_;
         my @connections = values $self->connection_pool->get_objects;
@@ -180,6 +200,7 @@ sub run {
 
     $self->connector->register_sessions_callback($sessions_cb);
     $self->connector->register_connect_callback($connect_cb);
+    $self->connector->register_metadata_callback($metadata_cb);
     $self->connector->register_disconnect_callback($disconnect_cb);
 
     $self->watch($self->manager_stream);
