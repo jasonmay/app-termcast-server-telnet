@@ -187,7 +187,7 @@ sub run {
 
     my $disconnect_cb = sub {
         my ($connector, $session_id) = @_;
-        my @connections = values $self->connection_pool->get_objects;
+        my @connections = $self->connection_pool->get_objects;
         foreach my $conn (@connections) {
             $conn->_clear_viewing
                 if $conn->viewing && $conn->viewing eq $session_id;
