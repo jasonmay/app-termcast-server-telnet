@@ -75,8 +75,8 @@ sub send_connection_list {
     # TODO, log: print "Sending stream menu to the customer\n";
     my $letter = 'a';
     my @stream_data = $self->unix_stream_objects;
-    $output .= "Users connected:\r\n";
     foreach my $stream (@stream_data) {
+        $output .= "Users connected:\r\n" unless $letter eq 'a';
         $output .= sprintf "  %s) %s (%s) - Active %s\r\n",
                    $letter,
                    $stream->username,
@@ -85,7 +85,7 @@ sub send_connection_list {
         $letter++;
     }
 
-    $output = "  No active termcast sessions!\r\n" if !$output;
+    $output .= "  No active termcast sessions!\r\n" unless $letter;
 
     $handle->syswrite(CLEAR . $output);
 }
