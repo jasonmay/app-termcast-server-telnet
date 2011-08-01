@@ -4,6 +4,12 @@ use Moose;
 use Time::Duration;
 
 use constant CLEAR => "\e[2J\e[H";
+use constant TELNET_MENU => join '', map { "$_\r\n" }
+    'Termcast -- Telnet style!',
+    '',
+    'If your terminal\'s dimensions differ from that which you want to view, please resize your terminal accordingly.',
+    '',
+    '----------';
 
 has session_pool => (
     is       => 'ro',
@@ -64,13 +70,14 @@ sub dispatch_menu_inputs {
 sub send_connection_list {
     my $self   = shift;
     my $handle = shift;
-    my $output;
+    my $output = TELNET_MENU;
 
     # TODO, log: print "Sending stream menu to the customer\n";
     my $letter = 'a';
     my @stream_data = $self->unix_stream_objects;
+    $output .= "Users connected:\r\n";
     foreach my $stream (@stream_data) {
-        $output .= sprintf "%s) %s (%s) - Active %s\r\n",
+        $output .= sprintf "  %s) %s (%s) - Active %s\r\n",
                    $letter,
                    $stream->username,
                    $stream->cols . 'x' . $stream->rows,
@@ -78,9 +85,9 @@ sub send_connection_list {
         $letter++;
     }
 
-    $output = "No active termcast sessions!\r\n" if !$output;
+    $output = "  No active termcast sessions!\r\n" if !$output;
 
-    $handle->syswrite(CLEAR . "Users connected:\r\n\r\n$output");
+    $handle->syswrite(CLEAR . $output);
 }
 
 sub get_stream_from_key {
